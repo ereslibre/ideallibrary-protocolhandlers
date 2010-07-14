@@ -26,9 +26,19 @@ static void recvCommand(int sock)
 	char *buf = (char*) calloc(1025, sizeof(char));
 	printf("*** Received:\n");
 
-	while (recv(sock, buf, 1024, 0) > 0) {
+	const int flags = fcntl(sock, F_GETFL, 0);
+	fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+	usleep(500 * 1000);
+
+	while (recv(sock, buf, 1024, MSG_PEEK) > 0) {
+		fcntl(sock, F_SETFL, flags);
+		recv(sock, buf, 1024, 0);
+
 		printf("%s", buf);
 		memset(buf, '\0', 1025);
+
+		fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+		usleep(500 * 1000);
 	}
 
 	free(buf);
@@ -55,8 +65,15 @@ int main()
 
 	if (!connect(sock, (struct sockaddr*) &destAddr, sizeof(struct sockaddr))) {
 		sendCommand(sock, "USER anonymous\r\n");
+		recvCommand(sock);
 		sendCommand(sock, "PASS\r\n");
+		recvCommand(sock);
 		sendCommand(sock, "CWD /\r\n");
+		recvCommand(sock);
+		sendCommand(sock, "PWD\r\n");
+		recvCommand(sock);
+		sendCommand(sock, "CWD /pub\r\n");
+		recvCommand(sock);
 		sendCommand(sock, "PWD\r\n");
 		recvCommand(sock);
 	} else {
