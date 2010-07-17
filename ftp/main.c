@@ -80,7 +80,7 @@ int main()
 		sendCommand(sock, "LIST\r\n");
 		recvCommand(sock);
 	} else {
-		printf("!!! Could not connect to ftp.kernel.org\n");
+		printf("!!! Could not connect to ftp.kde.org\n");
 		return 1;
 	}
 
