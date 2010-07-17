@@ -6,9 +6,9 @@
  * Extremely simple FTP client (it does nothing, academic purposes).
  */
 
+#include <time.h>
 #include <stdio.h>
 #include <netdb.h>
-#include <fcntl.h>
 #include <string.h>
 #include <stdlib.h>
 #include <arpa/inet.h>
@@ -26,19 +26,18 @@ static void recvCommand(int sock)
 	char *buf = (char*) calloc(1025, sizeof(char));
 	printf("*** Received:\n");
 
-	const int flags = fcntl(sock, F_GETFL, 0);
-	fcntl(sock, F_SETFL, flags | O_NONBLOCK);
-	usleep(500 * 1000);
+	fd_set readfds;
+	FD_ZERO(&readfds);
+	FD_SET(sock, &readfds);
 
-	while (recv(sock, buf, 1024, MSG_PEEK) > 0) {
-		fcntl(sock, F_SETFL, flags);
+	struct timespec time;
+	time.tv_sec = 0;
+	time.tv_nsec = 500000000;
+
+	while (pselect(sock + 1, &readfds, 0, 0, &time, 0) > 0) {
 		recv(sock, buf, 1024, 0);
-
 		printf("%s", buf);
 		memset(buf, '\0', 1025);
-
-		fcntl(sock, F_SETFL, flags | O_NONBLOCK);
-		usleep(500 * 1000);
 	}
 
 	free(buf);
@@ -48,7 +47,7 @@ int main()
 {
 	int sock = socket(AF_INET, SOCK_STREAM, 0);
 
-	struct hostent *const host = gethostbyname("ftp.kernel.org");
+	struct hostent *const host = gethostbyname("ftp.kde.org");
 
 	if (!host) {
 		printf("!!! Call to gethostbyname failed: %d\n", h_errno);
@@ -72,9 +71,13 @@ int main()
 		recvCommand(sock);
 		sendCommand(sock, "PWD\r\n");
 		recvCommand(sock);
-		sendCommand(sock, "CWD /pub\r\n");
+		sendCommand(sock, "CWD /pub/kde\r\n");
 		recvCommand(sock);
 		sendCommand(sock, "PWD\r\n");
+		recvCommand(sock);
+		sendCommand(sock, "PASV\r\n");
+		recvCommand(sock);
+		sendCommand(sock, "LIST\r\n");
 		recvCommand(sock);
 	} else {
 		printf("!!! Could not connect to ftp.kernel.org\n");
