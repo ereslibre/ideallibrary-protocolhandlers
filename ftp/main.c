@@ -35,9 +35,11 @@ static void recvCommand(int sock)
 	time.tv_nsec = 500000000;
 
 	while (pselect(sock + 1, &readfds, 0, 0, &time, 0) > 0) {
-		recv(sock, buf, 1024, 0);
-		printf("%s", buf);
-		memset(buf, '\0', 1025);
+		if (FD_ISSET(sock, &readfds)) {
+			recv(sock, buf, 1024, 0);
+			printf("%s", buf);
+			memset(buf, '\0', 1025);
+		}
 	}
 
 	free(buf);
